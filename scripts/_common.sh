@@ -37,6 +37,7 @@ build_luarocks_stack() {
     ynh_setup_source --source_id="gin" --dest_dir="${install_dir}/.build/gin" --full_replace
 
     pushd "${install_dir}/.build/gin" >/dev/null
+    sed -i '/"lua-cjson = 2.1.0-1",/d' gin-0.2.0-1.rockspec
     patch -N -p1 < "${install_dir}/gin.patch"
     luarocks --lua-version=5.1 --lua-dir="${openresty_prefix}/luajit" --tree="${luarocks_tree}" make
     popd >/dev/null
