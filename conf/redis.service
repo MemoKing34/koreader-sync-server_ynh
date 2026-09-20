@@ -1,0 +1,21 @@
+[Unit]
+Description=Redis for __APP__
+After=network.target
+
+[Service]
+Type=notify
+User=__APP__
+Group=__APP__
+ExecStart=/usr/bin/redis-server /etc/__APP__/redis.conf --supervised systemd --daemonize no
+ExecStop=/usr/bin/redis-cli -p __PORT_REDIS__ shutdown
+Restart=on-failure
+LimitNOFILE=65535
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=__DATA_DIR__/redis /var/log/__APP__ /run
+
+[Install]
+WantedBy=multi-user.target

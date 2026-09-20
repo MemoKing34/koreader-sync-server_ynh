@@ -1,0 +1,19 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+set_registration_setting
+
+ynh_script_progression "Fetching application source..."
+ynh_setup_source --dest_dir="$install_dir"
+
+build_openresty
+build_luarocks_stack
+configure_app_files
+setup_system_configs
+
+ynh_script_progression "Starting services..."
+ynh_systemctl --service="$app" --action="restart"
+
+ynh_script_progression "Installation of $app completed"

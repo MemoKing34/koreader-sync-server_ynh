@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Restoring application files..."
+ynh_restore "$install_dir"
+ynh_restore "$data_dir"
+chown -R "$app:$app" "$install_dir" "$data_dir"
+
+ynh_script_progression "Restoring system configurations..."
+ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
+ynh_restore "/etc/systemd/system/$app.service"
+ynh_restore "/etc/systemd/system/${app}-redis.service"
+ynh_restore "/etc/${app}/"
+ynh_restore "/var/log/${app}/" || true
+
+systemctl daemon-reload
+systemctl enable "${app}-redis.service" --quiet
+systemctl enable "$app.service" --quiet
+
+yunohost service add "${app}-redis" --description="Redis for ${app}" --test_status="redis-cli -p ${port_redis} ping | grep -q PONG"
+yunohost service add "$app" --description="KOReader Sync Server" --log="/var/log/${app}/${app}.log" --test_status="curl -fsS -H 'Accept: application/vnd.koreader.v1+json' http://127.0.0.1:${port}/healthcheck | grep -q '\"state\":\"OK\"'"
+
+ynh_systemctl --service="${app}-redis" --action="restart"
+ynh_systemctl --service="$app" --action="restart"
+ynh_systemctl --service=nginx --action=reload
+
+ynh_script_progression "Restoration completed for $app"
