@@ -1,0 +1,11 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Updating NGINX configuration for new URL..."
+
+ynh_change_url_nginx_config
+
+ynh_script_progression "Reloading NGINX..."
+ynh_systemctl --service=nginx --action=reload

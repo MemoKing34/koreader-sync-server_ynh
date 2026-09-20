@@ -1,0 +1,38 @@
+[Unit]
+Description=KOReader Sync Server
+After=network.target __APP__-redis.service
+Requires=__APP__-redis.service
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/
+Environment=GIN_ENV=production
+Environment=ENABLE_USER_REGISTRATION=__ENABLE_USER_REGISTRATION__
+Environment=KOSYNC_REDIS_HOST=127.0.0.1
+Environment=KOSYNC_REDIS_PORT=__PORT_REDIS__
+Environment=KOSYNC_REDIS_DATABASE=1
+Environment=PATH=__INSTALL_DIR__/openresty/nginx/sbin:__INSTALL_DIR__/openresty/luajit/bin:__INSTALL_DIR__/rocks/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
+Environment=LUA_PATH=__INSTALL_DIR__/rocks/share/lua/5.1/?.lua;__INSTALL_DIR__/rocks/share/lua/5.1/?/init.lua;__INSTALL_DIR__/?.lua;__INSTALL_DIR__/?/init.lua;;
+Environment=LUA_CPATH=__INSTALL_DIR__/rocks/lib/lua/5.1/?.so;__INSTALL_DIR__/openresty/lualib/?.so;;
+ExecStart=__INSTALL_DIR__/rocks/bin/gin start
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/__APP__/__APP__.log
+StandardError=append:/var/log/__APP__/__APP__.error.log
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target
