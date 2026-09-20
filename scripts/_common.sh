@@ -19,7 +19,7 @@ build_openresty() {
     ynh_setup_source --source_id="openresty" --dest_dir="${install_dir}/.build/openresty" --full_replace
 
     pushd "${install_dir}/.build/openresty" >/dev/null
-    ./util/configure --prefix="${openresty_prefix}"
+    ./configure --prefix="${openresty_prefix}"
     make -j"$(nproc)"
     make install
     popd >/dev/null
