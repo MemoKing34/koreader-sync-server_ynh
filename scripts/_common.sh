@@ -85,6 +85,8 @@ _configure_app() {
 }
 
 _set_permissions() {
+    # /var/log/$app is absent after restoring a pre-upgrade safety backup
+    mkdir -p "/var/log/$app"
     chown -R "$app:$app" "$install_dir" "$data_dir" "/var/log/$app"
     chmod -R o-rwx "$install_dir" "$data_dir" "/var/log/$app"
     chown root:"$app" "/etc/$app" "/etc/$app/redis.conf"
