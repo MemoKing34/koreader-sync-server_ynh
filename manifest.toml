@@ -77,4 +77,4 @@ ram.runtime = "100M"
     redis.default = 6380
 
     [resources.apt]
-    packages = "build-essential, libpcre2-dev, libssl-dev, zlib1g-dev, libreadline-dev, libncurses5-dev, lua5.1, liblua5.1-0-dev, luarocks, unzip, patch, redis-server"
+    packages = "build-essential, libpcre2-dev, libssl-dev, zlib1g-dev, libreadline-dev, libncurses-dev, lua5.1, liblua5.1-0-dev, luarocks, unzip, patch, redis-server"
