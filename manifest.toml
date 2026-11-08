@@ -45,16 +45,19 @@ ram.runtime = "100M"
 [resources]
     [resources.sources]
 
-        # Prebuilt upstream image (app + OpenResty + gin), extracted by
-        # docker-image-extract: no Docker on the server, no local compilation.
-        # The image is pinned by digest in the url (koreader/kosync:v2.1.1).
-        # ynh_setup_source requires a sha256 value but does not check it for
-        # docker sources, so it repeats that digest.
+        # Prebuilt upstream image koreader/kosync:v2.1.1 (app + OpenResty + gin),
+        # unpacked by docker-image-extract: no Docker on the server and no
+        # local compilation. Pinned by per-architecture manifest digests
+        # (docker-image-extract cannot select a platform from a multi-arch
+        # index digest). ynh_setup_source requires a sha256 value but does not
+        # check it for docker sources, so it repeats the digest.
         [resources.sources.main]
-        url = "koreader/kosync:sha256:bb3f13615365703315a43b9059f65e71e876440f867e23a42bf27f2fa18264e1"
-        sha256 = "bb3f13615365703315a43b9059f65e71e876440f867e23a42bf27f2fa18264e1"
         format = "docker"
         prefetch = false
+        amd64.url = "koreader/kosync:sha256:c9cd8976986e0a2893f47a203638bbd68335bb6e93f9045babbb7d83cf63549c"
+        amd64.sha256 = "c9cd8976986e0a2893f47a203638bbd68335bb6e93f9045babbb7d83cf63549c"
+        arm64.url = "koreader/kosync:sha256:b7769cea99632ce0ad2d66c03b01b79eb4541eff47f98d0e05a5a4d8bc783e9e"
+        arm64.sha256 = "b7769cea99632ce0ad2d66c03b01b79eb4541eff47f98d0e05a5a4d8bc783e9e"
 
     [resources.system_user]
 
