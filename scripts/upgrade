@@ -25,13 +25,7 @@ ynh_systemctl --service="$app" --action="stop"
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
 #=================================================
-ynh_script_progression "Upgrading source files..."
-
-# the runtime is always rebuilt so that OpenResty
-# and Lua dependencies always match the versions pinned by this package
-ynh_setup_source --dest_dir="$install_dir/app" --full_replace
-
-_build_runtime
+_install_runtime
 
 #=================================================
 # APP CONFIGURATION

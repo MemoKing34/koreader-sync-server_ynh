@@ -5,59 +5,38 @@
 #=================================================
 #
 # Layout of $install_dir:
-#   app/        upstream koreader-sync-server source (gin application root)
-#   openresty/  OpenResty built from source (provides nginx + LuaJIT + resty.*)
-#   lua/        LuaRocks tree holding gin and its Lua dependencies
+#   app/        koreader-sync-server application (gin application root)
+#   openresty/  OpenResty runtime (nginx + LuaJIT + resty.* libraries)
+#   lua/        gin framework and its Lua dependencies
 #
-# Everything is built natively on the host; no container is involved.
+# All three are taken from upstream's prebuilt image (koreader/kosync) with
+# YunoHost's `format = "docker"` source: ynh_setup_source downloads and
+# unpacks the image layers with docker-image-extract. Docker itself is
+# neither needed nor used, and nothing is compiled on the server.
 
-_luarocks() {
-    luarocks --lua-version=5.1 --tree="$install_dir/lua" "$@"
-}
+_install_runtime() {
+    local image_dir="$install_dir/build/image"
 
-# Build OpenResty into $install_dir/openresty
-_build_openresty() {
-    local build_dir="$install_dir/build/openresty"
+    ynh_script_progression "Fetching prebuilt KOReader sync server..."
 
-    ynh_script_progression "Building OpenResty (this may take a while)..."
+    ynh_safe_rm "$install_dir/build"
+    ynh_setup_source --dest_dir="$image_dir" --source_id="main"
 
+    ynh_script_progression "Installing application files..."
+
+    ynh_safe_rm "$install_dir/app"
     ynh_safe_rm "$install_dir/openresty"
-    ynh_setup_source --dest_dir="$build_dir" --source_id="openresty"
-
-    pushd "$build_dir" >/dev/null
-        ynh_hide_warnings ./configure --prefix="$install_dir/openresty" -j"$(nproc)"
-        ynh_hide_warnings make -j"$(nproc)"
-        ynh_hide_warnings make install
-    popd >/dev/null
-}
-
-# Install the gin framework and Lua dependencies into $install_dir/lua
-# (mirrors what upstream's Dockerfile does, but in a dedicated tree)
-_build_lua_deps() {
-    local build_dir="$install_dir/build/gin"
-
-    ynh_script_progression "Installing gin framework and Lua dependencies..."
-
     ynh_safe_rm "$install_dir/lua"
-    ynh_setup_source --dest_dir="$build_dir" --source_id="gin"
 
-    pushd "$build_dir" >/dev/null
-        # upstream patch adding https support to gin's test runner
-        patch --forward -p1 < "$install_dir/app/gin.patch"
-        ynh_hide_warnings _luarocks make
-    popd >/dev/null
+    # keep only what is needed from the image (it also holds a whole Debian base)
+    mv "$image_dir/app/koreader-sync-server" "$install_dir/app"
+    mv "$image_dir/opt/openresty" "$install_dir/openresty"
+    mkdir -p "$install_dir/lua/bin" "$install_dir/lua/share/lua" "$install_dir/lua/lib/lua"
+    mv "$image_dir/usr/local/share/lua/5.1" "$install_dir/lua/share/lua/5.1"
+    mv "$image_dir/usr/local/lib/lua/5.1" "$install_dir/lua/lib/lua/5.1"
+    # gin's CLI script (the image's /usr/local/bin/gin wrapper hardcodes /usr/local)
+    cp "$image_dir/usr/local/lib/luarocks/rocks-5.1/gin/0.2.0-1/bin/gin" "$install_dir/lua/bin/gin"
 
-    # replace gin's pinned, outdated luasocket with current versions
-    ynh_hide_warnings _luarocks remove --force luasocket
-    ynh_hide_warnings _luarocks install luasocket
-    ynh_hide_warnings _luarocks install luasec
-    ynh_hide_warnings _luarocks install redis-lua
-}
-
-_build_runtime() {
-    mkdir -p "$install_dir/build"
-    _build_openresty
-    _build_lua_deps
     ynh_safe_rm "$install_dir/build"
 }
 

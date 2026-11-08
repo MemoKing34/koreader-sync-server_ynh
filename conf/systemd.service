@@ -10,10 +10,11 @@ Group=__APP__
 WorkingDirectory=__INSTALL_DIR__/app
 Environment=GIN_ENV=production
 Environment=ENABLE_USER_REGISTRATION=__ENABLE_USER_REGISTRATION__
-Environment=PATH=__INSTALL_DIR__/openresty/nginx/sbin:__INSTALL_DIR__/openresty/bin:__INSTALL_DIR__/lua/bin:/usr/bin:/bin
-Environment=LUA_PATH=__INSTALL_DIR__/lua/share/lua/5.1/?.lua;__INSTALL_DIR__/lua/share/lua/5.1/?/init.lua;;
-Environment=LUA_CPATH=__INSTALL_DIR__/lua/lib/lua/5.1/?.so;;
-ExecStart=__INSTALL_DIR__/lua/bin/gin start
+Environment=PATH=__INSTALL_DIR__/openresty/nginx/sbin:__INSTALL_DIR__/openresty/bin:/usr/bin:/bin
+# OpenResty was built for /opt/openresty: point Lua at its relocated libraries
+Environment=LUA_PATH=__INSTALL_DIR__/openresty/site/lualib/?.lua;__INSTALL_DIR__/openresty/lualib/?.lua;__INSTALL_DIR__/openresty/lualib/?/init.lua;__INSTALL_DIR__/lua/share/lua/5.1/?.lua;__INSTALL_DIR__/lua/share/lua/5.1/?/init.lua;;
+Environment=LUA_CPATH=__INSTALL_DIR__/openresty/site/lualib/?.so;__INSTALL_DIR__/openresty/lualib/?.so;__INSTALL_DIR__/lua/lib/lua/5.1/?.so;;
+ExecStart=/usr/bin/lua5.1 __INSTALL_DIR__/lua/bin/gin start
 Restart=on-failure
 RestartSec=5
 

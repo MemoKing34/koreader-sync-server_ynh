@@ -6,15 +6,7 @@ source /usr/share/yunohost/helpers
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
 #=================================================
-ynh_script_progression "Setting up source files..."
-
-ynh_setup_source --dest_dir="$install_dir/app"
-
-#=================================================
-# BUILD RUNTIME (OpenResty + gin)
-#=================================================
-
-_build_runtime
+_install_runtime
 
 #=================================================
 # APP CONFIGURATION

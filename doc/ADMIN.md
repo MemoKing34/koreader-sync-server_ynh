@@ -14,6 +14,6 @@ The server is an API for KOReader, not a website, so it has no tile in the user 
 
 ### Technical notes
 
-- No containers are used. The package builds OpenResty and the Lua `gin` framework from source on your server during install and every upgrade. These steps take a few minutes.
+- No containers are used. The package fetches upstream's prebuilt image (`koreader/kosync`, pinned by digest) and unpacks the needed files (the app, OpenResty and the Lua `gin` framework) with YunoHost's `docker-image-extract` helper. Docker is not installed or run, and nothing is compiled on your server.
 - Data lives in a dedicated Redis instance (service `__APP__-redis`) that listens only on localhost. Its data is in `__DATA_DIR__/redis` and is included in YunoHost backups.
 - Logs are in `/var/log/__APP__/`.

@@ -7,7 +7,7 @@ name = "KOReader Sync Server"
 description.en = "Synchronize reading progress between your KOReader devices"
 description.fr = "Synchronisez votre progression de lecture entre vos appareils KOReader"
 
-version = "2.1.1~ynh1"
+version = "2.1.1~ynh2"
 
 maintainers = ["MemoKing34"]
 
@@ -16,14 +16,14 @@ license = "AGPL-3.0-only"
 code = "https://github.com/koreader/koreader-sync-server"
 
 [integration]
-yunohost = ">= 12.0.9"
+yunohost = ">= 13.0"
 helpers_version = "2.1"
-architectures = "all"
+architectures = ["amd64", "arm64"]
 multi_instance = true
 ldap = false
 sso = false
-disk = "300M"
-ram.build = "500M"
+disk = "600M"
+ram.build = "200M"
 ram.runtime = "100M"
 
 [install]
@@ -45,18 +45,16 @@ ram.runtime = "100M"
 [resources]
     [resources.sources]
 
+        # Prebuilt upstream image (app + OpenResty + gin), extracted by
+        # docker-image-extract: no Docker on the server, no local compilation.
+        # The image is pinned by digest in the url (koreader/kosync:v2.1.1).
+        # ynh_setup_source requires a sha256 value but does not check it for
+        # docker sources, so it repeats that digest.
         [resources.sources.main]
-        url = "https://github.com/koreader/koreader-sync-server/archive/refs/tags/v2.1.1.tar.gz"
-        sha256 = "a5373c679ebcf9e0877b1572970ca896ac241d04ed7723439813dee74bdb383e"
-        autoupdate.strategy = "latest_github_tag"
-
-        [resources.sources.openresty]
-        url = "https://openresty.org/download/openresty-1.29.2.3.tar.gz"
-        sha256 = "315e49fa4568747fec4bdada9614d2ba287e7aed4b3430d7ea25685e24cc43ff"
-
-        [resources.sources.gin]
-        url = "https://github.com/ostinelli/gin/archive/cb35e87fa0671fcf25e5bce5cb9487dee8b497e2.tar.gz"
-        sha256 = "572093b32acf3bfccde1fa3de52160ccc37a98f3ce22d5ad04fdd6ca8355dcda"
+        url = "koreader/kosync:sha256:bb3f13615365703315a43b9059f65e71e876440f867e23a42bf27f2fa18264e1"
+        sha256 = "bb3f13615365703315a43b9059f65e71e876440f867e23a42bf27f2fa18264e1"
+        format = "docker"
+        prefetch = false
 
     [resources.system_user]
 
@@ -77,4 +75,4 @@ ram.runtime = "100M"
     redis.default = 6380
 
     [resources.apt]
-    packages = "build-essential, libpcre2-dev, libssl-dev, zlib1g-dev, libreadline-dev, libncurses-dev, lua5.1, liblua5.1-0-dev, luarocks, unzip, patch, redis-server"
+    packages = "lua5.1, redis-server"
