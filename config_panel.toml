@@ -1,0 +1,18 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/config_panel.v1.schema.json
+
+version = "1.0"
+
+[main]
+name.en = "Configuration"
+name.fr = "Configuration"
+
+    [main.registration]
+    name.en = "Registration"
+    name.fr = "Inscription"
+
+        [main.registration.enable_user_registration]
+        ask.en = "Allow new KOReader users to register"
+        ask.fr = "Autoriser l'inscription de nouveaux utilisateurs KOReader"
+        help.en = "Disable this once you have created your accounts, to prevent strangers from using your server."
+        help.fr = "Désactivez cette option une fois vos comptes créés, pour éviter que des inconnus utilisent votre serveur."
+        type = "boolean"

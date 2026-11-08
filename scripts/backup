@@ -5,11 +5,34 @@ source /usr/share/yunohost/helpers
 
 ynh_print_info "Declaring files to be backed up..."
 
+#=================================================
+# BACKUP THE APP MAIN DIR
+#=================================================
+
 ynh_backup "$install_dir"
+
+#=================================================
+# BACKUP THE DATA DIR (redis database)
+#=================================================
+
+# flush redis to disk so the backup is consistent
+redis-cli -p "$port_redis" SAVE >/dev/null 2>&1 || true
+
 ynh_backup "$data_dir"
 
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+
 ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+
 ynh_backup "/etc/systemd/system/$app.service"
 ynh_backup "/etc/systemd/system/${app}-redis.service"
-ynh_backup "/etc/${app}/"
-ynh_backup "/var/log/${app}/"
+
+ynh_backup "/etc/logrotate.d/$app"
+
+ynh_backup "/etc/$app/"
+
+ynh_backup "/var/log/$app/"
+
+ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

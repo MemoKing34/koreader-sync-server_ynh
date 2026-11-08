@@ -1,5 +1,5 @@
 [Unit]
-Description=KOReader Sync Server
+Description=KOReader sync server (__APP__)
 After=network.target __APP__-redis.service
 Requires=__APP__-redis.service
 
@@ -7,21 +7,18 @@ Requires=__APP__-redis.service
 Type=simple
 User=__APP__
 Group=__APP__
-WorkingDirectory=__INSTALL_DIR__/
+WorkingDirectory=__INSTALL_DIR__/app
 Environment=GIN_ENV=production
 Environment=ENABLE_USER_REGISTRATION=__ENABLE_USER_REGISTRATION__
-Environment=KOSYNC_REDIS_HOST=127.0.0.1
-Environment=KOSYNC_REDIS_PORT=__PORT_REDIS__
-Environment=KOSYNC_REDIS_DATABASE=1
-Environment=PATH=__INSTALL_DIR__/openresty/nginx/sbin:__INSTALL_DIR__/openresty/luajit/bin:__INSTALL_DIR__/rocks/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
-Environment=LUA_PATH=__INSTALL_DIR__/rocks/share/lua/5.1/?.lua;__INSTALL_DIR__/rocks/share/lua/5.1/?/init.lua;__INSTALL_DIR__/?.lua;__INSTALL_DIR__/?/init.lua;;
-Environment=LUA_CPATH=__INSTALL_DIR__/rocks/lib/lua/5.1/?.so;__INSTALL_DIR__/openresty/lualib/?.so;;
-ExecStart=__INSTALL_DIR__/rocks/bin/gin start
+Environment=PATH=__INSTALL_DIR__/openresty/nginx/sbin:__INSTALL_DIR__/openresty/bin:__INSTALL_DIR__/lua/bin:/usr/bin:/bin
+Environment=LUA_PATH=__INSTALL_DIR__/lua/share/lua/5.1/?.lua;__INSTALL_DIR__/lua/share/lua/5.1/?/init.lua;;
+Environment=LUA_CPATH=__INSTALL_DIR__/lua/lib/lua/5.1/?.so;;
+ExecStart=__INSTALL_DIR__/lua/bin/gin start
 Restart=on-failure
 RestartSec=5
-StandardOutput=append:/var/log/__APP__/__APP__.log
-StandardError=append:/var/log/__APP__/__APP__.error.log
 
+# Sandboxing options to harden security
+# (no MemoryDenyWriteExecute: LuaJIT needs to JIT-compile code)
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes
@@ -30,9 +27,11 @@ ProtectHome=yes
 ProtectControlGroups=yes
 ProtectKernelModules=yes
 ProtectKernelTunables=yes
-LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
+LockPersonality=yes
 
 [Install]
 WantedBy=multi-user.target

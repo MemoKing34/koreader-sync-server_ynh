@@ -3,22 +3,63 @@
 source _common.sh
 source /usr/share/yunohost/helpers
 
+#=================================================
+# ENSURE DOWNWARD COMPATIBILITY
+#=================================================
+
+# earlier package revisions stored "true"/"false"
+if [ "${enable_user_registration:-}" = "true" ]; then
+    enable_user_registration=1
+elif [ "${enable_user_registration:-}" != "1" ]; then
+    enable_user_registration=0
+fi
+ynh_app_setting_set --key=enable_user_registration --value="$enable_user_registration"
+
+#=================================================
+# STOP SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Stopping $app's systemd services..."
+
 ynh_systemctl --service="$app" --action="stop"
-ynh_systemctl --service="${app}-redis" --action="stop"
 
-enable_user_registration=$(ynh_app_setting_get --key=enable_user_registration)
-set_registration_setting
-
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
 ynh_script_progression "Upgrading source files..."
-ynh_setup_source --dest_dir="$install_dir" --full_replace --keep="openresty rocks logs tmp"
 
-build_openresty
-build_luarocks_stack
-configure_app_files
-setup_system_configs
+# the runtime is always rebuilt so that OpenResty
+# and Lua dependencies always match the versions pinned by this package
+ynh_setup_source --dest_dir="$install_dir/app" --full_replace
 
-ynh_script_progression "Restarting services..."
+_build_runtime
+
+#=================================================
+# APP CONFIGURATION
+#=================================================
+
+_configure_app
+_set_permissions
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Upgrading system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd --service="${app}-redis" --template="redis.service"
+ynh_config_add_systemd
+
+ynh_config_add_logrotate
+
+_register_services
+
+#=================================================
+# START SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Starting $app's systemd services..."
+
 ynh_systemctl --service="${app}-redis" --action="restart"
-ynh_systemctl --service="$app" --action="restart"
+ynh_systemctl --service="$app" --action="start"
 
 ynh_script_progression "Upgrade of $app completed"

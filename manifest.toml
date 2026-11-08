@@ -4,29 +4,27 @@ packaging_format = 2
 
 id = "koreader-sync-server"
 name = "KOReader Sync Server"
-description.en = "Self-hosted synchronization service for KOReader devices"
-
-tags = ["reading", "synchronization", "api"]
+description.en = "Synchronize reading progress between your KOReader devices"
+description.fr = "Synchronisez votre progression de lecture entre vos appareils KOReader"
 
 version = "2.1.1~ynh1"
 
 maintainers = ["MemoKing34"]
 
 [upstream]
-license = "AGPL-3.0"
-website = "https://github.com/koreader/koreader-sync-server"
+license = "AGPL-3.0-only"
 code = "https://github.com/koreader/koreader-sync-server"
 
 [integration]
-yunohost = ">= 12.1.17"
+yunohost = ">= 12.0.9"
 helpers_version = "2.1"
-architectures = ["amd64", "arm64", "armhf"]
-multi_instance = false
+architectures = "all"
+multi_instance = true
 ldap = false
 sso = false
-disk = "500M"
-ram.build = "1G"
-ram.runtime = "150M"
+disk = "300M"
+ram.build = "500M"
+ram.runtime = "100M"
 
 [install]
     [install.domain]
@@ -34,45 +32,49 @@ ram.runtime = "150M"
 
     [install.path]
     type = "path"
-    default = "/koreader"
-
-    [install.init_main_permission]
-    type = "group"
-    default = "visitors"
+    default = "/kosync"
 
     [install.enable_user_registration]
     ask.en = "Allow new KOReader users to register on this server?"
+    ask.fr = "Autoriser l'inscription de nouveaux utilisateurs KOReader sur ce serveur ?"
+    help.en = "You can change this later in the app's configuration panel."
+    help.fr = "Vous pourrez modifier ce choix plus tard dans le panneau de configuration de l'application."
     type = "boolean"
     default = true
 
 [resources]
     [resources.sources]
 
-    [resources.sources.main]
-    url = "https://github.com/koreader/koreader-sync-server/archive/refs/tags/v2.1.1.tar.gz"
-    sha256 = "a5373c679ebcf9e0877b1572970ca896ac241d04ed7723439813dee74bdb383e"
-    autoupdate.strategy = "latest_github_tag"
+        [resources.sources.main]
+        url = "https://github.com/koreader/koreader-sync-server/archive/refs/tags/v2.1.1.tar.gz"
+        sha256 = "a5373c679ebcf9e0877b1572970ca896ac241d04ed7723439813dee74bdb383e"
+        autoupdate.strategy = "latest_github_tag"
 
-    [resources.sources.openresty]
-    url = "https://openresty.org/download/openresty-1.29.2.3.tar.gz"
-    sha256 = "315e49fa4568747fec4bdada9614d2ba287e7aed4b3430d7ea25685e24cc43ff"
+        [resources.sources.openresty]
+        url = "https://openresty.org/download/openresty-1.29.2.3.tar.gz"
+        sha256 = "315e49fa4568747fec4bdada9614d2ba287e7aed4b3430d7ea25685e24cc43ff"
 
-    [resources.sources.gin]
-    url = "https://github.com/ostinelli/gin/archive/cb35e87fa0671fcf25e5bce5cb9487dee8b497e2.tar.gz"
-    sha256 = "572093b32acf3bfccde1fa3de52160ccc37a98f3ce22d5ad04fdd6ca8355dcda"
+        [resources.sources.gin]
+        url = "https://github.com/ostinelli/gin/archive/cb35e87fa0671fcf25e5bce5cb9487dee8b497e2.tar.gz"
+        sha256 = "572093b32acf3bfccde1fa3de52160ccc37a98f3ce22d5ad04fdd6ca8355dcda"
 
     [resources.system_user]
 
     [resources.install_dir]
 
     [resources.data_dir]
+    subdirs = ["redis"]
 
     [resources.permissions]
     main.url = "/"
+    main.allowed = "visitors"
+    main.show_tile = false
+    main.auth_header = false
+    main.protected = true
 
     [resources.ports]
-    main.default = 17200
-    redis.default = 16379
+    main.default = 7200
+    redis.default = 6380
 
     [resources.apt]
-    packages = "ca-certificates, curl, patch, build-essential, libreadline-dev, libncurses5-dev, libpcre2-dev, libssl-dev, zlib1g-dev, luarocks, redis-server, openssl"
+    packages = "build-essential, libpcre2-dev, libssl-dev, zlib1g-dev, libreadline-dev, libncurses5-dev, lua5.1, liblua5.1-0-dev, luarocks, unzip, patch, redis-server"

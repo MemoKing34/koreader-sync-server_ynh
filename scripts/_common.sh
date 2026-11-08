@@ -3,88 +3,109 @@
 #=================================================
 # COMMON VARIABLES AND CUSTOM HELPERS
 #=================================================
+#
+# Layout of $install_dir:
+#   app/        upstream koreader-sync-server source (gin application root)
+#   openresty/  OpenResty built from source (provides nginx + LuaJIT + resty.*)
+#   lua/        LuaRocks tree holding gin and its Lua dependencies
+#
+# Everything is built natively on the host; no container is involved.
 
-pkg_dependencies="ca-certificates curl patch build-essential libreadline-dev libncurses5-dev libpcre2-dev libssl-dev zlib1g-dev luarocks redis-server openssl"
+_luarocks() {
+    luarocks --lua-version=5.1 --tree="$install_dir/lua" "$@"
+}
 
-openresty_prefix="${install_dir}/openresty"
-luarocks_tree="${install_dir}/rocks"
+# Build OpenResty into $install_dir/openresty
+_build_openresty() {
+    local build_dir="$install_dir/build/openresty"
 
-build_openresty() {
-    if [ -x "${openresty_prefix}/nginx/sbin/nginx" ]; then
-        return
-    fi
+    ynh_script_progression "Building OpenResty (this may take a while)..."
 
-    ynh_script_progression "Building OpenResty runtime..."
+    ynh_safe_rm "$install_dir/openresty"
+    ynh_setup_source --dest_dir="$build_dir" --source_id="openresty"
 
-    ynh_setup_source --source_id="openresty" --dest_dir="${install_dir}/.build/openresty" --full_replace
-
-    pushd "${install_dir}/.build/openresty" >/dev/null
-    ./configure --prefix="${openresty_prefix}"
-    make -j"$(nproc)"
-    make install
+    pushd "$build_dir" >/dev/null
+        ynh_hide_warnings ./configure --prefix="$install_dir/openresty" -j"$(nproc)"
+        ynh_hide_warnings make -j"$(nproc)"
+        ynh_hide_warnings make install
     popd >/dev/null
 }
 
-build_luarocks_stack() {
-    if [ -x "${luarocks_tree}/bin/gin" ]; then
-        return
-    fi
+# Install the gin framework and Lua dependencies into $install_dir/lua
+# (mirrors what upstream's Dockerfile does, but in a dedicated tree)
+_build_lua_deps() {
+    local build_dir="$install_dir/build/gin"
 
-    ynh_script_progression "Installing Gin and Lua dependencies..."
+    ynh_script_progression "Installing gin framework and Lua dependencies..."
 
-    export PATH="${openresty_prefix}/luajit/bin:${PATH}"
+    ynh_safe_rm "$install_dir/lua"
+    ynh_setup_source --dest_dir="$build_dir" --source_id="gin"
 
-    ynh_setup_source --source_id="gin" --dest_dir="${install_dir}/.build/gin" --full_replace
-
-    pushd "${install_dir}/.build/gin" >/dev/null
-    sed -i '/"lua-cjson = 2.1.0-1",/d' gin-0.2.0-1.rockspec
-    patch -N -p1 < "${install_dir}/gin.patch"
-    luarocks --lua-version=5.1 --lua-dir="${openresty_prefix}/luajit" --tree="${luarocks_tree}" make
+    pushd "$build_dir" >/dev/null
+        # upstream patch adding https support to gin's test runner
+        patch --forward -p1 < "$install_dir/app/gin.patch"
+        ynh_hide_warnings _luarocks make
     popd >/dev/null
 
-    luarocks --lua-version=5.1 --lua-dir="${openresty_prefix}/luajit" --tree="${luarocks_tree}" install luasocket
-    luarocks --lua-version=5.1 --lua-dir="${openresty_prefix}/luajit" --tree="${luarocks_tree}" install luasec
-    luarocks --lua-version=5.1 --lua-dir="${openresty_prefix}/luajit" --tree="${luarocks_tree}" install redis-lua
+    # replace gin's pinned, outdated luasocket with current versions
+    ynh_hide_warnings _luarocks remove --force luasocket
+    ynh_hide_warnings _luarocks install luasocket
+    ynh_hide_warnings _luarocks install luasec
+    ynh_hide_warnings _luarocks install redis-lua
 }
 
-configure_app_files() {
-    ynh_script_progression "Configuring application files..."
-
-    mkdir -p "${install_dir}/logs" "${install_dir}/tmp"
-    mkdir -p "${data_dir}/redis"
-
-    ynh_replace --match='port = 7200,' --replace="port = ${port}," --file="${install_dir}/config/settings.lua"
-
-    ynh_config_add --template="upstream_nginx.conf" --destination="${install_dir}/config/nginx.conf"
-    ynh_config_add --template="redis.lua" --destination="${install_dir}/db/redis.lua"
-
-    chown -R "$app:$app" "${install_dir}" "${data_dir}"
-    chmod -R u=rwX,g=rX,o= "${install_dir}" "${data_dir}"
+_build_runtime() {
+    mkdir -p "$install_dir/build"
+    _build_openresty
+    _build_lua_deps
+    ynh_safe_rm "$install_dir/build"
 }
 
-set_registration_setting() {
-    if [ "${enable_user_registration}" = "1" ] || [ "${enable_user_registration}" = "true" ]; then
-        enable_user_registration="true"
-    else
-        enable_user_registration="false"
-    fi
-    ynh_app_setting_set --key=enable_user_registration --value="${enable_user_registration}"
+# Adapt upstream config files to this instance
+_configure_app() {
+    ynh_script_progression "Configuring the application..."
+
+    # gin runtime nginx config: plain HTTP on localhost, YunoHost nginx does TLS
+    ynh_config_add --template="gin-nginx.conf" --destination="$install_dir/app/config/nginx.conf"
+
+    # app port (production block)
+    sed -i "/Settings.production/,/}/ s/port = [0-9]*/port = $port/" "$install_dir/app/config/settings.lua"
+
+    # redis port (production block)
+    sed -i "/production = {/,/}/ s/port = [0-9]*/port = $port_redis/" "$install_dir/app/db/redis.lua"
+
+    # gin writes its compiled nginx config and pid into tmp/, logs into logs/
+    mkdir -p "$install_dir/app/tmp" "/var/log/$app"
+    ynh_safe_rm "$install_dir/app/logs"
+    ln -s "/var/log/$app" "$install_dir/app/logs"
+
+    # redis config
+    mkdir -p "/etc/$app" "$data_dir/redis"
+    ynh_config_add --template="redis.conf" --destination="/etc/$app/redis.conf"
 }
 
-setup_system_configs() {
-    ynh_script_progression "Installing system configuration..."
+_set_permissions() {
+    chown -R "$app:$app" "$install_dir" "$data_dir" "/var/log/$app"
+    chmod -R o-rwx "$install_dir" "$data_dir" "/var/log/$app"
+    chown root:"$app" "/etc/$app" "/etc/$app/redis.conf"
+    chmod 750 "/etc/$app"
+    chmod 640 "/etc/$app/redis.conf"
+}
 
-    mkdir -p "/etc/${app}" "/var/log/${app}"
-    ynh_config_add --template="redis.conf" --destination="/etc/${app}/redis.conf"
-    ynh_config_add --template="redis.service" --destination="/etc/systemd/system/${app}-redis.service"
-    ynh_config_add_systemd
-    ynh_config_add_nginx
-    ynh_systemctl --service="${app}-redis" --action="enable"
-    ynh_systemctl --service="${app}-redis" --action="restart"
-    ynh_systemctl --service="$app" --action="enable"
+_register_services() {
+    yunohost service add "${app}-redis" \
+        --description="Redis database for $app" \
+        --test_status="redis-cli -p $port_redis ping | grep -q PONG"
+    yunohost service add "$app" \
+        --description="KOReader sync server" \
+        --log="/var/log/$app/production-error.log" \
+        --test_status="curl -fsS -H 'Accept: application/vnd.koreader.v1+json' http://127.0.0.1:$port/healthcheck | grep -q OK"
+}
 
-    yunohost service add "${app}-redis" --description="Redis for ${app}" --test_status="redis-cli -p ${port_redis} ping | grep -q PONG"
-    yunohost service add "$app" --description="KOReader Sync Server" --log="/var/log/${app}/${app}.log" --test_status="curl -fsS -H 'Accept: application/vnd.koreader.v1+json' http://127.0.0.1:${port}/healthcheck | grep -q '\"state\":\"OK\"'"
-
-    chown -R "$app:$app" "/var/log/${app}" "${data_dir}/redis"
+_unregister_services() {
+    for service in "$app" "${app}-redis"; do
+        if ynh_hide_warnings yunohost service status "$service" >/dev/null; then
+            yunohost service remove "$service"
+        fi
+    done
 }

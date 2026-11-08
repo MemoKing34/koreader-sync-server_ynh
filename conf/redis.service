@@ -1,21 +1,32 @@
 [Unit]
-Description=Redis for __APP__
+Description=Redis database for __APP__
 After=network.target
 
 [Service]
 Type=notify
 User=__APP__
 Group=__APP__
-ExecStart=/usr/bin/redis-server /etc/__APP__/redis.conf --supervised systemd --daemonize no
-ExecStop=/usr/bin/redis-cli -p __PORT_REDIS__ shutdown
+ExecStart=/usr/bin/redis-server /etc/__APP__/redis.conf
+TimeoutStartSec=60
 Restart=on-failure
-LimitNOFILE=65535
+LimitNOFILE=10032
 
+# Sandboxing options to harden security
 NoNewPrivileges=yes
 PrivateTmp=yes
+PrivateDevices=yes
 ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=__DATA_DIR__/redis /var/log/__APP__ /run
+ProtectHome=read-only
+ReadWritePaths=__DATA_DIR__/redis
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
 
 [Install]
 WantedBy=multi-user.target

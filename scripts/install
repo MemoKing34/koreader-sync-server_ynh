@@ -3,17 +3,46 @@
 source _common.sh
 source /usr/share/yunohost/helpers
 
-set_registration_setting
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Setting up source files..."
 
-ynh_script_progression "Fetching application source..."
-ynh_setup_source --dest_dir="$install_dir"
+ynh_setup_source --dest_dir="$install_dir/app"
 
-build_openresty
-build_luarocks_stack
-configure_app_files
-setup_system_configs
+#=================================================
+# BUILD RUNTIME (OpenResty + gin)
+#=================================================
 
-ynh_script_progression "Starting services..."
-ynh_systemctl --service="$app" --action="restart"
+_build_runtime
+
+#=================================================
+# APP CONFIGURATION
+#=================================================
+
+_configure_app
+_set_permissions
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Adding system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd --service="${app}-redis" --template="redis.service"
+ynh_config_add_systemd
+
+ynh_config_add_logrotate
+
+_register_services
+
+#=================================================
+# START SYSTEMD SERVICES
+#=================================================
+ynh_script_progression "Starting $app's systemd services..."
+
+ynh_systemctl --service="${app}-redis" --action="start"
+ynh_systemctl --service="$app" --action="start"
 
 ynh_script_progression "Installation of $app completed"
